@@ -3,7 +3,8 @@ import time
 import keyboard
 import mouse
 from PIL import ImageGrab
-import shared  # Importer le module global
+import shared  # Assurez-vous d'importer shared
+
 
 def capture_color_click():
     """
@@ -22,10 +23,15 @@ def capture_color_click():
         screenshot = ImageGrab.grab()
         color = screenshot.getpixel(position)
         print(f"Couleur capturée : {color}")
+
+        # Ajouter la couleur capturée à la palette
+        shared.gartic_palette.append(color)
+
         return color
     except Exception as e:
         print(f"Erreur lors de la capture de la couleur : {e}")
         return None
+
 
 def select_colors():
     """
@@ -51,3 +57,4 @@ def select_colors():
         mouse.unhook(on_click)
 
     print("Positions des clics de couleur : ", shared.color_click_positions)
+    print("Palette de couleurs capturée : ", shared.gartic_palette)

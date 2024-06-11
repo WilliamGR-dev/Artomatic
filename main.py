@@ -3,7 +3,7 @@ from drawing import draw_lines
 from color_selection import select_colors
 from gui import create_gui
 import shared  # Importer le module global
-import time  # Assurez-vous que le module time est importé
+import time
 
 
 def start_drawing():
@@ -45,7 +45,15 @@ def start_drawing():
 
     color_positions = shared.color_click_positions
 
-    draw_lines(lines, draw_start_pos, color_positions)
+    # Organiser les points par couleur
+    points_by_color = {}
+    for x, y, color in lines:
+        color_tuple = tuple(color)
+        if color_tuple not in points_by_color:
+            points_by_color[color_tuple] = []
+        points_by_color[color_tuple].append((x, y))
+
+    draw_lines(points_by_color, draw_start_pos, color_positions)
 
     print("Dessin terminé ou annulé par l'utilisateur !")
 
