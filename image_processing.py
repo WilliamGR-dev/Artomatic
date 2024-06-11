@@ -1,54 +1,73 @@
 from PIL import Image
 import numpy as np
+from sklearn.cluster import KMeans
 
 def resize_image(image, max_width, max_height):
     """
     Redimensionne l'image pour qu'elle s'adapte à la taille maximale donnée sans étirer ni écraser l'image.
-
-    :param image: Instance de l'image PIL.
-    :param max_width: Largeur maximale de la zone de dessin.
-    :param max_height: Hauteur maximale de la zone de dessin.
-    :return: Image redimensionnée.
     """
     original_width, original_height = image.size
     aspect_ratio = original_width / original_height
 
     if max_width / max_height > aspect_ratio:
-        # Limité par la hauteur
         new_height = max_height
         new_width = int(max_height * aspect_ratio)
     else:
-        # Limité par la largeur
         new_width = max_width
         new_height = int(max_width / aspect_ratio)
 
-    # Utiliser LANCZOS pour un redimensionnement de haute qualité
     resized_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
     return resized_image
 
-def image_to_lines(image_path, max_width, max_height, threshold=128, sample_rate=6):
+def get_dominant_colors(image, num_colors=10):
+    """
+    Extrait les couleurs dominantes de l'image en utilisant K-means clustering.
+    """
+    image = image.convert('RGB')
+    image = np.array(image)
+    pixels = image.reshape(-1, 3)
+
+    kmeans = KMeans(n_clusters=num_colors)
+    kmeans.fit(pixels)
+
+    colors = kmeans.cluster_centers_.astype(int)
+    return colors
+
+def find_closest_palette_color(color, palette):
+    """
+    Trouve la couleur la plus proche dans la palette donnée.
+    """
+    palette = np.array(palette)
+    distances = np.sqrt(np.sum((palette - color) ** 2, axis=1))
+    return palette[np.argmin(distances)]
+
+def image_to_lines(image_path, max_width, max_height, threshold=128, sample_rate=6, num_colors=10):
     """
     Convertit une image en lignes de dessin avec un échantillonnage pour réduire la résolution.
-
-    :param image_path: Chemin de l'image à dessiner.
-    :param max_width: Largeur maximale de la zone de dessin.
-    :param max_height: Hauteur maximale de la zone de dessin.
-    :param threshold: Seuil de binarisation pour convertir l'image en noir et blanc.
-    :param sample_rate: Intervalle d'échantillonnage en pixels.
-    :return: Liste de points à dessiner.
     """
-    img = Image.open(image_path).convert('L')  # Convertir en niveaux de gris
-    img = img.point(lambda p: p > threshold and 255)  # Binariser l'image
+    img = Image.open(image_path)
+    img = resize_image(img, max_width, max_height)
 
-    # Redimensionner l'image pour s'adapter à la zone de dessin sans déformation
-    resized_image = resize_image(img, max_width, max_height)
-    resized_image_array = np.array(resized_image)
+    dominant_colors = get_dominant_colors(img, num_colors=num_colors)
+
+    gartic_palette = [
+        (0, 0, 0), (255, 255, 255), (128, 128, 128), (192, 192, 192),
+        (255, 0, 0), (128, 0, 0), (255, 255, 0), (128, 128, 0),
+        (0, 255, 0), (0, 128, 0), (0, 255, 255), (0, 128, 128),
+        (0, 0, 255), (0, 0, 128), (255, 0, 255), (128, 0, 128)
+    ]
+
+    color_mapping = {tuple(color): find_closest_palette_color(color, gartic_palette) for color in dominant_colors}
+
+    img = img.convert('RGB')
+    img_data = np.array(img)
     lines = []
 
-    # Parcourir l'image redimensionnée avec un échantillonnage
-    for y in range(0, resized_image_array.shape[0], sample_rate):
-        for x in range(0, resized_image_array.shape[1], sample_rate):
-            if resized_image_array[y, x] == 0:
-                lines.append((x, y))
+    for y in range(0, img_data.shape[0], sample_rate):
+        for x in range(0, img_data.shape[1], sample_rate):
+            pixel_color = tuple(img_data[y, x])
+            closest_color = find_closest_palette_color(pixel_color, list(color_mapping.keys()))
+            if closest_color is not None:
+                lines.append((x, y, closest_color))
 
-    return lines, resized_image.size  # Retourne aussi la taille de l'image redimensionnée
+    return lines, img.size
