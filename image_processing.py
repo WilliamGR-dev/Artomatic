@@ -40,6 +40,10 @@ def find_closest_palette_color(color, palette, tolerance=5):
     :param tolerance: La tolérance pour considérer les couleurs comme équivalentes.
     :return: La couleur la plus proche dans la palette ou None si aucune couleur n'est suffisamment proche.
     """
+    if len(palette) == 0:
+        print("La palette est vide. Aucune couleur n'a été capturée.")
+        return None
+
     palette = np.array(palette)
     distances = np.sqrt(np.sum((palette - color) ** 2, axis=1))
 
@@ -58,8 +62,14 @@ def image_to_lines(image_path, max_width, max_height, sample_rate=6, num_colors=
 
     gartic_palette = shared.gartic_palette
 
-    color_mapping = {tuple(color): find_closest_palette_color(color, gartic_palette, tolerance) for color in
-                     dominant_colors}
+    # Ignorer la palette de couleurs si les positions RGB sont définies
+    if len(gartic_palette) == 0 and len(shared.rgb_input_positions) == 0:
+        print("Erreur : la palette de couleurs est vide et aucune position RGB n'est définie.")
+        return [], img.size
+
+    color_mapping = {}
+    if len(gartic_palette) > 0:
+        color_mapping = {tuple(color): find_closest_palette_color(color, gartic_palette, tolerance) for color in dominant_colors}
 
     img = img.convert('RGB')
     img_data = np.array(img)
@@ -68,7 +78,11 @@ def image_to_lines(image_path, max_width, max_height, sample_rate=6, num_colors=
     for y in range(0, img_data.shape[0], sample_rate):
         for x in range(0, img_data.shape[1], sample_rate):
             pixel_color = tuple(img_data[y, x])
-            closest_color = find_closest_palette_color(pixel_color, list(color_mapping.keys()), tolerance)
+            closest_color = pixel_color  # Par défaut, utiliser la couleur pixel si RGB est utilisé
+
+            if color_mapping and len(shared.rgb_input_positions) == 0:  # Utiliser la palette seulement si elle est disponible et le mode RGB n'est pas activé
+                closest_color = find_closest_palette_color(pixel_color, list(color_mapping.keys()), tolerance)
+
             if closest_color is not None:
                 lines.append((x, y, closest_color))
 

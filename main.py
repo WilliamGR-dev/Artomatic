@@ -1,10 +1,9 @@
 from image_processing import image_to_lines
 from drawing import draw_lines
-from color_selection import select_colors
+from color_selection import select_colors, capture_all_and_rgb_clicks  # Importer capture_all_and_rgb_clicks
 from gui import create_gui
-import shared  # Importer le module global
+import shared
 import time
-
 
 def start_drawing():
     start_pos = shared.start_pos
@@ -57,6 +56,5 @@ def start_drawing():
 
     print("Dessin terminé ou annulé par l'utilisateur !")
 
-
 if __name__ == "__main__":
-    create_gui(start_drawing, select_colors)
+    create_gui(start_drawing, select_colors, capture_all_and_rgb_clicks)

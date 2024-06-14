@@ -1,21 +1,50 @@
 import pyautogui
 import keyboard
 import numpy as np
+import shared
+import time
 
 # Réglages de pyautogui pour réduire les délais
 pyautogui.PAUSE = 0.01  # Pause très courte entre les actions
 pyautogui.MINIMUM_SLEEP = 0  # Pas de délai minimum de sommeil
 pyautogui.DURATION = 0  # Déplacement instantané
 
+def enter_rgb_values(color, rgb_positions):
+    """
+    Entrer les valeurs RGB dans les champs de saisie.
+    """
+    r, g, b = color
+    r_position, g_position, b_position = rgb_positions
+
+    # Entrer la valeur de R
+    pyautogui.click(r_position)
+    pyautogui.hotkey('ctrl', 'a')  # Sélectionner tout le texte dans le champ
+    pyautogui.typewrite(str(r))
+
+    # Entrer la valeur de G
+    pyautogui.click(g_position)
+    pyautogui.hotkey('ctrl', 'a')  # Sélectionner tout le texte dans le champ
+    pyautogui.typewrite(str(g))
+
+    # Entrer la valeur de B
+    pyautogui.click(b_position)
+    pyautogui.hotkey('ctrl', 'a')  # Sélectionner tout le texte dans le champ
+    pyautogui.typewrite(str(b))
+
+    # Attendre que la couleur soit appliquée
+    time.sleep(0.1)
+
+def click_to_access_rgb_inputs():
+    """
+    Clique sur les positions capturées pour accéder aux champs RGB.
+    """
+    for position in shared.color_click_positions:
+        pyautogui.click(position)
+        time.sleep(0.1)  # Pause pour s'assurer que le clic est traité
 
 def draw_lines(points_by_color, start_pos, color_positions, step_size=1):
     """
     Dessine des lignes en utilisant pyautogui avec des mouvements optimisés et en changeant de couleur.
-
-    :param points_by_color: Dictionnaire de points à dessiner regroupés par couleur.
-    :param start_pos: Position de départ pour le dessin.
-    :param color_positions: Liste des positions des couleurs capturées dans la palette.
-    :param step_size: Taille de l'échantillonnage pour la réduction des mouvements.
     """
     white_color = (255, 255, 255)
     tolerance_for_white = 20
@@ -37,8 +66,25 @@ def draw_lines(points_by_color, start_pos, color_positions, step_size=1):
     for color, points in filtered_points_by_color.items():
         print(f"Dessin avec la couleur : {color}")
 
-        color_index = find_closest_color_index(color, color_positions)
-        pyautogui.click(color_positions[color_index])
+        if shared.rgb_input_positions:
+            # Cliquer sur les positions capturées (normales) avant d'utiliser les champs RGB
+            for pos in shared.color_click_positions:
+                pyautogui.click(pos)
+                time.sleep(0.1)
+
+            # Utiliser les champs RGB pour définir la couleur exacte
+            enter_rgb_values(color, shared.rgb_input_positions)
+        elif color_positions:
+            # Utiliser la palette si elle est disponible
+            color_index = find_closest_color_index(color, color_positions)
+            if color_index != -1:
+                pyautogui.click(color_positions[color_index])
+            else:
+                print(f"Impossible de trouver la couleur {color} dans la palette capturée.")
+                return
+        else:
+            print(f"Ni les champs RGB ni la palette ne sont disponibles pour la couleur {color}.")
+            return
 
         if points:
             pyautogui.moveTo(start_pos[0] + points[0][0] * step_size,
@@ -74,8 +120,17 @@ def draw_lines(points_by_color, start_pos, color_positions, step_size=1):
     # Dessiner les points blancs en dernier
     if white_points:
         print("Dessin des points blancs en dernier")
-        color_index = find_closest_color_index(white_color, color_positions)
-        pyautogui.click(color_positions[color_index])
+        if shared.rgb_input_positions:
+            # Cliquer sur les positions capturées (normales) avant d'utiliser les champs RGB pour le blanc
+            for pos in shared.color_click_positions:
+                pyautogui.click(pos)
+                time.sleep(0.1)
+
+            # Utiliser RGB pour le blanc si en mode RGB
+            enter_rgb_values(white_color, shared.rgb_input_positions)
+        else:
+            color_index = find_closest_color_index(white_color, color_positions)
+            pyautogui.click(color_positions[color_index])
 
         previous_x, previous_y = white_points[0]
         pyautogui.moveTo(start_pos[0] + previous_x * step_size,
@@ -105,7 +160,6 @@ def draw_lines(points_by_color, start_pos, color_positions, step_size=1):
             previous_x, previous_y = x, y
 
         pyautogui.mouseUp(button='left')
-
 
 def find_closest_color_index(color, color_positions):
     """

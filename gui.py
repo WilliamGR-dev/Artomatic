@@ -3,6 +3,7 @@ from tkinter import filedialog
 import pyautogui
 import time
 import shared  # Mise à jour de l'importation du module global
+from color_selection import capture_all_and_rgb_clicks  # Importer les fonctions nécessaires
 
 def select_image(status_label, start_button):
     shared.file_path = filedialog.askopenfilename(
@@ -39,31 +40,36 @@ def select_points(status_label):
     else:
         status_label.config(text="Échec de la capture des points. Veuillez réessayer.")
 
-def create_gui(start_drawing, select_colors):
+def create_gui(start_drawing, select_colors, capture_all_and_rgb_clicks):
     global status_label, start_button, root
 
     root = tk.Tk()
     root.title("Bot de Dessin")
 
-    # Ajouter un bouton pour lancer le dessin
     start_button = tk.Button(root, text="Lancer le Dessin", command=start_drawing, state=tk.DISABLED)
     start_button.pack(pady=10)
 
-    # Ajouter un bouton pour sélectionner l'image
     select_button = tk.Button(root, text="Sélectionner l'image", command=lambda: select_image(status_label, start_button))
     select_button.pack(pady=10)
 
-    # Ajouter un bouton pour capturer les points de démarrage et de fin
     capture_button = tk.Button(root, text="Sélectionner Points", command=lambda: select_points(status_label))
     capture_button.pack(pady=10)
 
-    # Ajouter un bouton pour capturer les positions des clics de couleur
     color_button = tk.Button(root, text="Capturer Couleurs", command=select_colors)
     color_button.pack(pady=10)
 
-    # Ajouter une étiquette pour afficher le statut
+    precision_var = tk.BooleanVar()
+    precision_checkbox = tk.Checkbutton(root, text="Mode Précision", variable=precision_var, command=lambda: set_precision_mode(precision_var))
+    precision_checkbox.pack(pady=10)
+
+    capture_all_button = tk.Button(root, text="Capturer tous les clics et les champs RGB", command=capture_all_and_rgb_clicks)
+    capture_all_button.pack(pady=10)
+
     status_label = tk.Label(root, text="Aucun fichier ou point sélectionné")
     status_label.pack(pady=20)
 
-    # Lancer la boucle principale de la fenêtre
     root.mainloop()
+
+def set_precision_mode(precision_var):
+    shared.precision_mode = precision_var.get()
+    print(f"Mode précision activé : {shared.precision_mode}")
